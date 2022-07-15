@@ -1,0 +1,4 @@
+out/
+sample/
+error_list.txt
+__pycache__/
