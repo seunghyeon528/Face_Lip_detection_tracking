@@ -2,7 +2,7 @@
 립리딩 영상 face / lip ROI labelling 작업
 
 ## 1. Example
-<img src="https://user-images.githubusercontent.com/77431192/179312614-04b450a5-ab56-4310-bed6-d2650aba0dae.gif" width="200" height="400"/>
+<img src="https://user-images.githubusercontent.com/77431192/179312614-04b450a5-ab56-4310-bed6-d2650aba0dae.gif" width="100" height="100"/>
 ## 2. How to run
 * locate videos to be processed at ./sample
 * results will be saved at ./out
