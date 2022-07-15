@@ -4,4 +4,8 @@
 ## 1. Example
 
 ## 2. How to run
-* locate videos to be extracted at <sample>
+* locate videos to be extracted at ./sample
+* results will be saved at ./out
+~~~
+python main.py
+~~~
