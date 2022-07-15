@@ -9,7 +9,7 @@
 ## 2. How to run
 * locate videos to be processed at `./sample` (args.root_dir)
 * results will be saved at `./out` (args.save_dir)
-* If error occurs, file_name and error message will be written at `error_list.txt` (args.error_txt_path), I bet there will be few errors!😊
+* If error occurs, file_name and error message will be written at `error_list.txt` (args.error_txt_path). But I bet there will be few errors!😊
 ~~~
 python main.py
 ~~~
