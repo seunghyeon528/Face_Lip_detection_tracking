@@ -14,5 +14,30 @@
 python main.py
 ~~~
 
-## 3. Details
+## 3. Output directory
+* main.py detect face ROI and lip ROI at the same time.  
+* `./out` directory tree is as follows. 
+
+```bash
+├── lip_mp4
+   ├── sample1.mp4
+   ├── sample2.mp4
+   └── sample3.mp4
+             '
+             '  
+             '
+├── lip_json
+   ├── sample1.json
+   ├── sample2.json
+   └── sample3.json
+             '
+             '  
+             '
+├── face_mp4
+├── face_json
+
+├── train.csv
+``` 
+
+## 4. Details
 [Face_Lip_detection_tracking_guide](https://pollen-cardboard-eef.notion.site/Face_Lip_detection_tracking_guide-c4a59f4e3f1246b5b5c934942e7ccd42)
