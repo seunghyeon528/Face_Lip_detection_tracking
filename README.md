@@ -15,7 +15,7 @@ python main.py
 ~~~
 
 ## 3. Output directory
-* main.py detect face ROI and lip ROI at the same time.  
+* `main.py` detect face ROI and lip ROI at the same time.  
 * `./out` directory tree is as follows. 
 
 ```bash
