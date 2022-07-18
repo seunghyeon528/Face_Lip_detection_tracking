@@ -44,9 +44,7 @@ python main.py
    ├── sample1.json
    ├── sample2.json
    └── sample3.json
-             '
-             '  
-             '
+
 ```
 
 ## 4. Details
