@@ -27,7 +27,7 @@ def load_args(default_config = None):
     parser.add_argument('--multi-process-num', type = int, default=2, help='')  
     
     parser.add_argument('--gpu', type = bool, default=True, help='True -> use GPU for face detector')  
-    parser.add_argument('--gpu_num', type = str, default='1', help='')  
+    parser.add_argument('--gpu-num', type = str, default='1', help='')  
 
     parser.add_argument('--save-mp4', type = bool, default=True, help='save cropped mp4 or not')  
     parser.add_argument('--save-json', type = bool, default=True, help='save json containing labelling points or not')  
@@ -162,15 +162,16 @@ def process(args,vid_path):
             else: # TRACK
                 (success, box) = face_tracker.update(frame)
                 if success:
+                    pdb.set_trace()
                     face_box = [int(x) for x in box]
-                    face_previous_box = box
+                    face_previous_box = face_box
                 else:
                     face_box = face_previous_box
 
                 (success, box) = lip_tracker.update(frame)
                 if success:
                     lip_box = [int(x) for x in box]
-                    lip_previous_box = box
+                    lip_previous_box = lip_box
                 else:
                     lip_box = lip_previous_box
 
