@@ -5,4 +5,4 @@
 * KLT - face (main_KLT.py) added
 * Python logger used instead txt file
 * Use config(*.yaml) for args variables setting.
-* Exception handling regarding median flow tracker success flag added (main_FAIl.py)
+* Exception handling regarding median flow tracker success flag added (main_FAI.py)
