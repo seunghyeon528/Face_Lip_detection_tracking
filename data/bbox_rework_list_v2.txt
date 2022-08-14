@@ -1,0 +1,5 @@
+/home/nas4/NIA/original/1(소음없음)/C(일반인)/M(남성)/lip_J_1_M_02_C063_B_005.mp4
+/home/nas4/NIA/original/1(소음없음)/C(일반인)/M(남성)/lip_J_1_M_04_C335_A_003.mp4
+/home/nas4/NIA/original/2(생활소음)/C(일반인)/M(남성)/lip_J_2_M_03_C170_B_007.mp4
+/home/nas4/NIA/original/3(교통소음)/E(전문가)/M(남성)/lip_K_3_M_05_E066_I_007.mp4
+/home/nas4/NIA/original/5(자연소음)/C(일반인)/F(여성)/lip_K_5_F_02_C448_A_009.mp4

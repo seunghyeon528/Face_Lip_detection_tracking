@@ -16,21 +16,25 @@ def load_detector(device):
     fa=face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, device=device,flip_input=False, face_detector='sfd') # fa_probs_threshold  = 0.95 
     return fa
 
-def enlarge_box(box, enlarge_ratio, video_shape):
+def enlarge_box(box, enlarge_ratio, video_shape, args):
         (num_frames, h, w, c) = video_shape
         (xmin, ymin, width, height) = [int(v) for v in box]
-        ""
-        ## -- enlarge
+        
+        ## -- restore pixel range : resized -> original 
+        if args.resize:
+            xmin,ymin,width,height = int(xmin/args.resize_ratio), int(ymin/args.resize_ratio), int(width/args.resize_ratio), int(height/args.resize_ratio)
+
+        ## -- get center point
         center_y = ymin + int(height/2)
         center_x = xmin + int(width/2)
 
-        ## -- square
+        ## -- square & enlarge
         one_side = max(width, height)
         half_one_side = int(one_side * (1 + enlarge_ratio) / 2)
 
         ## -- check one_side length 
-        y_margin = min(abs(center_y), abs(1080-center_y))
-        x_margin = min(abs(center_x), abs(1920-center_x))
+        y_margin = min(abs(center_y), abs(int(h)-center_y))
+        x_margin = min(abs(center_x), abs(int(w)-center_x))
         margin = min(y_margin, x_margin)
         if margin < half_one_side:
             half_one_side = margin
@@ -74,10 +78,23 @@ def get_corrected_boxes(input_boxes,shift_frame_num,video_shape):
             bottom = int(w)-1
         if right > int(h)-1: 
             right = int(h)-1
-        positive_boxes.append([left, top, right, bottom])
+        positive_boxes.append([left, top, right, bottom]) # [ymin,xmin,ymax,xmax]
     #pdb.set_trace() 
     positive_boxes.append(input_boxes[-1])
     return positive_boxes
+
+def check_bbox_min_max(corrected_boxes,label_list):
+    minmax_checked_boxes = []
+    for i,bbox in enumerate(corrected_boxes):
+        [ymin,xmin,ymax,xmax] = bbox
+        if (ymin < ymax) and (xmin < xmax):
+            minmax_checked_boxes.append(bbox)
+        else:
+            if i == 0:
+                minmax_checked_boxes.append(label_list[-1])
+            else:
+                minmax_checked_boxes.append(minmax_checked_boxes[i-1])
+    return minmax_checked_boxes
 
 def crop_video(frame_list, corrected_boxes):
     cropped_frame_list = []

@@ -1,0 +1,25 @@
+file_search : False
+root_dir : "./input/MOBIO"
+data_list_txt_path : "./data/lip_fail_file_full_path_list.txt"
+
+save_dir : "./out/lip_fail/"
+save_mp4: True
+save_json: True
+
+multiprocessing: True
+multi_process_num: 2
+
+gpu: True
+gpu_num: '0'
+
+short_test: False
+
+shift_frame: 30
+opencv_tracker_type: "medianflow"
+
+lip_detect_enlarge: 1
+lip_enlarge: 0
+face_enlarge: 1
+
+resize : False 
+resize_ratio: 0.5

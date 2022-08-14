@@ -1,51 +1,65 @@
+import datetime
 import argparse
+from modulefinder import IMPORT_NAME
 from tqdm import tqdm
 import pdb
 import os
 import statistics
 import multiprocessing
 from functools import partial
-
+import matplotlib
 import cv2
 import numpy as np 
+import yaml
+import sys
+from pathlib import Path
+import time
 
-from utils import recursive_file_search
-from utils import save_mp4, save_json
+from utils import recursive_file_search, find_option_type
+from utils import save_mp4, save_json, get_logger
 from utils_vid import load_reader, load_detector
 from utils_vid import enlarge_box, get_corrected_boxes, crop_video
 
 ###############################################################################
 ##                                      ARGS
 ###############################################################################
-def load_args(default_config = None):
-    parser = argparse.ArgumentParser(description='Face cropping')
+parser = argparse.ArgumentParser(description='Face cropping')
 
-    parser.add_argument('--root-dir', type = str, default="./sample", help='root directory of input files')  
-    parser.add_argument('--save-dir', type = str, default="./out", help='root directory of output files')  
+## -- CONFIG
+parser.add_argument('--config',         type=str,   default="./configs/NIA_LIP_FAIL_180_CV_30_v2.yaml",   help='Config YAML file')
 
-    parser.add_argument('--multiprocessing', type = bool, default=False, help='')  
-    parser.add_argument('--multi-process-num', type = int, default=2, help='')  
-    
-    parser.add_argument('--gpu', type = bool, default=True, help='True -> use GPU for face detector')  
-    parser.add_argument('--gpu-num', type = str, default='1', help='')  
+## -- INPUT
+parser.add_argument('--file_search', type = bool, default=True,help='recursive file search') # True -> use videos at root-dir, False -> use data list txt path
+parser.add_argument('--root_dir', type = str, default="./input/MOBIO", help='root directory of input files')  
+parser.add_argument('--data_list_txt_path', type = str, default="./data/uhd_list.txt",help='recursive file search') 
 
-    parser.add_argument('--save-mp4', type = bool, default=True, help='save cropped mp4 or not')  
-    parser.add_argument('--save-json', type = bool, default=True, help='save json containing labelling points or not')  
-    
-    parser.add_argument('--error-txt-path', type = str, default="error_list.txt", help='')
+## -- OUTPUT
+parser.add_argument('--save_dir', type = str, default="./bbox_rework_out/MOBIO/CV/", help='root directory of output files')  
+parser.add_argument('--save_mp4', type = bool, default=True, help='save cropped mp4 or not')  
+parser.add_argument('--save_json', type = bool, default=True, help='save json containing labelling points or not')  
 
-    parser.add_argument('--shift-frame', type =int, default= 90, help='per each shift frame size, detection executed')  
-    parser.add_argument('--lip-detect-enlarge', type =float, default=1,help='enlarge detection box before put into tracker') # LIP X 2 before tracking
-    parser.add_argument('--lip-enlarge', type =float, default=0,help='enlarge proportion')
-    parser.add_argument('--face-enlarge', type =float, default=1,help='enlarge proportion') # FACE X 2
-    
-    parser.add_argument('--short-test', type = bool, default=True,help='True -> 30sec test') 
-    
+## -- RUN ENVRIONEMNT
+parser.add_argument('--multiprocessing', type = bool, default=False, help='')  
+parser.add_argument('--multi_process_num', type = int, default=2, help='')  
 
-    args = parser.parse_args()          
-    return args
+parser.add_argument('--gpu', type = bool, default=True, help='True -> use GPU for face detector')  
+parser.add_argument('--gpu_num', type = str, default='0', help='')  
 
-args = load_args()
+parser.add_argument('--short_test', type = bool, default=False,help='True -> 30sec test') 
+
+## -- ALGORHITHM
+parser.add_argument('--shift_frame', type =int, default= 90, help='per each shift frame size, detection executed')  
+parser.add_argument('--opencv_tracker_type', type = str, default="medianflow", help='one of medianflow/csrt/mosse/mil/kcf/boosting/tld/goturn') 
+
+parser.add_argument('--lip_detect_enlarge', type =float, default=1,help='enlarge detection box before put into tracker') # LIP X 2 before tracking
+parser.add_argument('--lip_enlarge', type =float, default=0,help='enlarge proportion')
+parser.add_argument('--face_enlarge', type =float, default=1,help='enlarge proportion') # FACE X 2
+
+parser.add_argument('--resize', type =bool, default=False,help='resize before put into detector / tracker') # UHD -> HD  / Detection fail 
+parser.add_argument('--resize_ratio', type =float, default=0.5,help='resize proportion') # UHD -> HD  / Detection fail 
+
+args = parser.parse_args()          
+
 
 
 
@@ -98,7 +112,7 @@ def fa_DETECTION(resized_frame, fa, lip_enlarge_ratio):
     return box, lip_box
 
 
-def process(args,vid_path):
+def process(args,error_logger,success_logger,vid_path):
     
     # Device Cofiguration
     os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu_num
@@ -116,7 +130,7 @@ def process(args,vid_path):
     video_shape =  (num_frames, h, w, c) 
     #face_tracker, lip_tracker = load_tracker(vid_path)
     fa = load_detector(device) 
-
+    # pdb.set_trace()
     OPENCV_OBJECT_TRACKERS = {
         "csrt": cv2.TrackerCSRT_create,
         "kcf": cv2.TrackerKCF_create,
@@ -129,6 +143,7 @@ def process(args,vid_path):
     }
 
     try:
+        start_time = time.time()
 
         ## --  variables
         frame_temp_list = []
@@ -144,9 +159,15 @@ def process(args,vid_path):
         ## -- Walk every frame
         for i, frame in tqdm(enumerate(reader.nextFrame())):
             frame_temp_list.append(frame) # RGB
+            if args.resize:
+                dsize_width = int (w * args.resize_ratio)
+                dsize_height = int (h * args.resize_ratio)
+                resized_frame = cv2.resize(frame, dsize=(dsize_width, dsize_height),interpolation=cv2.INTER_LINEAR)
+            else:
+                resized_frame = frame
             ####################### DETECT or TRACK #########################################################
             if i%args.shift_frame == 0: # DETECT
-                face_box, lip_box = fa_DETECTION(frame, fa, args.lip_detect_enlarge)
+                face_box, lip_box = fa_DETECTION(resized_frame, fa, args.lip_detect_enlarge)
                 if face_box == None: # detector fail
                     print("detection fail!") 
                     face_box = face_previous_box
@@ -154,21 +175,21 @@ def process(args,vid_path):
                 else: # detector sucess
                     face_previous_box = face_box
                     lip_previous_box = lip_box
-                    face_tracker = OPENCV_OBJECT_TRACKERS["medianflow"]()
-                    face_tracker.init(frame, tuple(face_box))
-                    lip_tracker = OPENCV_OBJECT_TRACKERS["medianflow"]()
-                    lip_tracker.init(frame, tuple(lip_box))
+                # init tracker
+                face_tracker = OPENCV_OBJECT_TRACKERS[args.opencv_tracker_type]()
+                face_tracker.init(resized_frame, tuple(face_box))
+                lip_tracker = OPENCV_OBJECT_TRACKERS[args.opencv_tracker_type]()
+                lip_tracker.init(resized_frame, tuple(lip_box))
 
             else: # TRACK
-                (success, box) = face_tracker.update(frame)
+                (success, box) = face_tracker.update(resized_frame)
                 if success:
-                    pdb.set_trace()
                     face_box = [int(x) for x in box]
                     face_previous_box = face_box
                 else:
                     face_box = face_previous_box
 
-                (success, box) = lip_tracker.update(frame)
+                (success, box) = lip_tracker.update(resized_frame)
                 if success:
                     lip_box = [int(x) for x in box]
                     lip_previous_box = lip_box
@@ -176,7 +197,7 @@ def process(args,vid_path):
                     lip_box = lip_previous_box
 
             ## -- get 4 points
-            face_enlarged_square_box, lip_enlarged_square_box = enlarge_box(face_box,args.face_enlarge,video_shape), enlarge_box(lip_box,args.lip_enlarge,video_shape)
+            face_enlarged_square_box, lip_enlarged_square_box = enlarge_box(face_box,args.face_enlarge,video_shape,args), enlarge_box(lip_box,args.lip_enlarge,video_shape,args)
             face_temp_bboxes.append(face_enlarged_square_box)
             lip_temp_bboxes.append(lip_enlarged_square_box)
 
@@ -207,6 +228,7 @@ def process(args,vid_path):
                     break
         ########################## REMAINIDER ##################################################################
         face_temp_cropped = crop_video(frame_temp_list, face_temp_bboxes)
+        # pdb.set_trace()
         face_cropped_frame_list.extend(face_temp_cropped)
         face_label_list.extend(face_temp_bboxes)
 
@@ -229,11 +251,14 @@ def process(args,vid_path):
         ## -- initialization for next vid
         face_previous_box = None
         lip_previous_box = None
+        
+        success_logger.info(f'====================== vid_path : {vid_path} ======================')
+        success_logger.info(f'cost time : {time.time() - start_time:1.3f}')
 
-    except Exception as e: 
-        error_path = args.error_txt_path    
-        with open(error_path, "a") as f:
-            f.write(vid_path + "\t" + str(e) + "\n")
+    except Exception as e:
+        error_logger.info(f'====================== vid_path : {vid_path} ======================')
+        error_logger.exception(str(e))
+        error_logger.info(f'{i}th frame'+"\n")
 
 
 
@@ -241,17 +266,40 @@ def process(args,vid_path):
 ##                                      MAIN
 #################################################################################
 def main(args):
+    ## -- log
+    save_dir_path = os.path.join(os.path.basename(__file__),Path(args.config).stem,datetime.datetime.now().isoformat().split('.')[0])
+    error_logger = get_logger(save_dir_path, "error_log")
+    success_logger = get_logger(save_dir_path, "success_log")
 
-    videos_list = recursive_file_search(args.root_dir, ".mp4")
+    ## -- load video path list
+    if args.file_search:
+        videos_list = recursive_file_search(args.root_dir, ".mp4")
+    else:
+        with open(args.data_list_txt_path,"r") as f:
+            videos_list = f.readlines()
+        videos_list = [x.strip() for x in videos_list]
     
+    ## -- process
     if args.multiprocessing:
         pool_obj = multiprocessing.Pool(args.multi_process_num)
-        func = partial(process,args)
+        func = partial(process,args,error_logger,success_logger)
         answer = pool_obj.map(func,videos_list)  
     else:
         for vid_path in tqdm(videos_list):
-            process(args,vid_path)
+            process(args,error_logger,success_logger,vid_path)
 
-if __name__ == '__main__':
-    args = load_args()
+
+if __name__ == '__main__':     
+    ## -- parse YAML
+    if args.config is not None:
+        pdb.set_trace()
+        with open(args.config, "r") as f:
+            yml_config = yaml.load(f, Loader=yaml.FullLoader)
+        for k, v in yml_config.items():
+            if k in args.__dict__:
+                typ = find_option_type(k, parser)
+                args.__dict__[k] = typ(v)
+            else:
+                sys.stderr.write("Ignored unknown parameter {} in yaml.\n".format(k))
+    pdb.set_trace()
     main(args)

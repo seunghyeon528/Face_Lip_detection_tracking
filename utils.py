@@ -5,6 +5,28 @@ import os
 import json
 import cv2
 import pdb
+import datetime
+import logging
+
+def find_option_type(key, parser):
+    for opt in parser._get_optional_actions():
+        if ('--' + key) in opt.option_strings:
+           return opt.type
+    raise ValueError
+    
+def get_logger(save_dir_path,file_name):
+    log_path = 'log/{}/{}.txt'.format(save_dir_path,file_name)
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    logger = logging.getLogger(file_name)
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(log_path)
+    fh.setLevel(logging.INFO)
+    logger.addHandler(fh)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logger.addHandler(console)
+    return logger
 
 def recursive_file_search(root_dir, ext):
     pathname = root_dir + "/**/*" + ext
@@ -24,9 +46,7 @@ def save_json(vid_path, save_dir, input_boxes, type):
 
     filename = os.path.basename(str(vid_path)).replace(".mp4", ".json")
     json_out_path = os.path.join(save_dir, "{}_json".format(type), filename)
-    dir_name = os.path.dirname(json_out_path)
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+    os.makedirs(os.path.dirname(json_out_path), exist_ok=True)
 
     with open(json_out_path, 'w', encoding='utf-8') as make_file:
         json.dump(face_box, make_file, indent="\t")
@@ -35,9 +55,7 @@ def save_mp4(vid_path, save_dir, cropped_video_frames, type):
     filename = os.path.basename(vid_path).replace(".mp4", "")
     checkout_path = os.path.join(save_dir, "{}_mp4".format(type), filename)
     checkout_path = checkout_path + ".mp4"
-    
-    if not os.path.exists(os.path.dirname(checkout_path)):
-        os.makedirs(os.path.dirname(checkout_path))
+    os.makedirs(os.path.dirname(checkout_path),exist_ok=True)
 
     resize_face = (224,224)
     fps = 30
