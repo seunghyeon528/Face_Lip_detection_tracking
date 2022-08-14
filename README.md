@@ -49,3 +49,9 @@ python main.py
 
 ## 4. Details
 [Face_Lip_detection_tracking_guide](https://pollen-cardboard-eef.notion.site/Face_Lip_detection_tracking_guide-c4a59f4e3f1246b5b5c934942e7ccd42)
+
+## 5. lsh branch
+- [x] KLT tracker version (main_KLT.py, only for face tracking) added.
+- [x] Python logger used instead txt file.
+- [x] Input configs(*.yaml) for args variables setting.
+- [x] Exception handling regarding median flow tracker success flag added (main_FAIL.py).
