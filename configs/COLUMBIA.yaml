@@ -1,0 +1,27 @@
+file_search : True
+root_dir : "/home/nas3/DB/ColumbiaASD/Columbia_processed/video_processed"
+data_list_txt_path : "./data/lip_fail_file_full_path_list.txt"
+
+save_dir : "./out/columbia/"
+remain_path_depth : 2
+save_mp4: True
+save_json: True
+save_image: True
+
+multiprocessing: True
+multi_process_num: 2
+
+gpu: True
+gpu_num: '0'
+
+short_test: False
+
+shift_frame: 10
+opencv_tracker_type: "medianflow"
+
+lip_detect_enlarge: 1
+lip_enlarge: 0
+face_enlarge: 0.1
+
+resize : False 
+resize_ratio: 0.5

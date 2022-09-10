@@ -21,7 +21,7 @@ from pathlib import Path
 import time
 
 from utils import recursive_file_search, find_option_type
-from utils import save_mp4, save_json, get_logger
+from utils import save_mp4, save_json, get_logger, save_image, save_args
 from utils_vid import load_reader, load_detector
 from utils_vid import enlarge_box, get_corrected_boxes, crop_video, check_bbox_min_max
 
@@ -31,7 +31,7 @@ from utils_vid import enlarge_box, get_corrected_boxes, crop_video, check_bbox_m
 parser = argparse.ArgumentParser(description='Face cropping')
 
 ## -- CONFIG
-parser.add_argument('--config',         type=str,   default="./configs/NIA_LIP_FAIL_180_CV_30_v3.yaml",   help='Config YAML file')
+parser.add_argument('--config',         type=str,   default="./configs/COLUMBIA.yaml",   help='Config YAML file')
 
 ## -- INPUT
 parser.add_argument('--file_search', type = bool, default=True,help='recursive file search') # True -> use videos at root-dir, False -> use data list txt path
@@ -40,8 +40,10 @@ parser.add_argument('--data_list_txt_path', type = str, default="./data/uhd_list
 
 ## -- OUTPUT
 parser.add_argument('--save_dir', type = str, default="./bbox_rework_out/MOBIO/CV/", help='root directory of output files')  
+parser.add_argument('--remain_path_depth', type = int, default=2, help='') # original path */*/*/a/0.mp4 -> remain_path_depth=2 
 parser.add_argument('--save_mp4', type = bool, default=True, help='save cropped mp4 or not')  
 parser.add_argument('--save_json', type = bool, default=True, help='save json containing labelling points or not')  
+parser.add_argument('--save_image', type = bool, default=True, help='save json containing labelling points or not')  
 
 ## -- RUN ENVRIONEMNT
 parser.add_argument('--multiprocessing', type = bool, default=False, help='')  
@@ -261,11 +263,19 @@ def process(args,error_logger,success_logger,vid_path):
             assert(len(face_label_list)==num_frames)
 
         if args.save_mp4:
-            save_mp4(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=face_cropped_frame_list, type="face") 
-            save_mp4(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=lip_cropped_frame_list, type="lip") 
+            save_mp4(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=face_cropped_frame_list, \
+                type="face",remain_path_depth=args.remain_path_depth) 
+            save_mp4(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=lip_cropped_frame_list, \
+                type="lip",remain_path_depth=args.remain_path_depth) 
         if args.save_json:
             save_json(vid_path=vid_path, save_dir=args.save_dir, input_boxes=face_label_list, type="face")
             save_json(vid_path=vid_path, save_dir=args.save_dir, input_boxes=lip_label_list, type="lip")
+        if args.save_image:
+            save_image(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=face_cropped_frame_list, \
+                type="face",remain_path_depth=args.remain_path_depth) 
+            save_image(vid_path=vid_path, save_dir = args.save_dir, cropped_video_frames=lip_cropped_frame_list, \
+                type="lip",remain_path_depth=args.remain_path_depth) 
+            
         
         ## -- initialization for next vid
         face_previous_box = None
@@ -322,4 +332,5 @@ if __name__ == '__main__':
             else:
                 sys.stderr.write("Ignored unknown parameter {} in yaml.\n".format(k))
     pdb.set_trace()
+    save_args(args)
     main(args)
